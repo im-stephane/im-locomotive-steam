@@ -1,0 +1,16 @@
+---
+title: All the pages
+listed: false
+published: true
+---
+{% extends parent %}
+{% block content %}
+<ul>
+{% for page in site.pages %}
+<li>{{ page.title }}</li>
+{% endfor %}
+</ul>
+
+<!-- TEST -->{{ site.index.children | map: 'title' | sort | join: " - " }}<!-- TEST -->
+
+{% endblock %}

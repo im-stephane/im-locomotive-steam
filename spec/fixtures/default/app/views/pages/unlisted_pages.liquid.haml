@@ -1,0 +1,10 @@
+---
+title: Unlisted pages
+position: 11
+---
+%ul
+  {% with_scope listed: false %}
+  {% for page in site.pages %}
+  %li {{ page.title }}
+  {% endfor %}
+  {% endwith_scope %}

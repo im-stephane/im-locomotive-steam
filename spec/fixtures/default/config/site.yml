@@ -1,0 +1,39 @@
+name: Sample site
+
+subdomain: sample
+
+domains: ['example.org', 'sample.example.com', 'sample.lvh.me']
+
+locales: ['en', 'fr', 'nb']
+
+timezone: 'America/Chicago'
+
+seo_title:
+  en: A simple LocomotiveCMS website
+  fr: Un simple LocomotiveCMS site web
+
+meta_keywords:
+  en: some meta keywords
+  fr: quelques mots cles
+
+meta_description: some meta description
+
+robots_txt: "User-agent: *\nDisallow:"
+
+metafields:
+  theme:
+    color_scheme:
+      en: 'white'
+      fr: 'blue'
+      nb: 'red'
+  social:
+    facebook_id: 'FB42'
+    google_id: 'G42'
+  github:
+    api_url: https://api.github.com/repos/vmg/redcarpet/issues?state=closed
+    expires_in: 42
+  smtp:
+    address: localhost
+    port: 25
+    user_name: user
+    password: password

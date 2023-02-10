@@ -1,0 +1,103 @@
+require 'spec_helper'
+
+describe Locomotive::Steam::ImageResizerService do
+
+  let(:resizer) { nil }
+  let(:path)    { nil }
+  let(:service) { described_class.new(resizer, path) }
+
+  describe '#resize' do
+
+    let(:geometry)  { '400x30#' }
+    let(:input)     { 'http://upload.wikimedia.org/wikipedia/en/thumb/b/b5/Metropolitan_railway_steam_locomotive_2781022036.png/240px-Metropolitan_railway_steam_locomotive_2781022036.png' }
+
+    subject { service.resize(input, geometry) }
+
+    describe 'no resizer' do
+      it { is_expected.to eq 'http://upload.wikimedia.org/wikipedia/en/thumb/b/b5/Metropolitan_railway_steam_locomotive_2781022036.png/240px-Metropolitan_railway_steam_locomotive_2781022036.png' }
+    end
+
+    describe 'DragonFly' do
+
+      let(:resizer) { Dragonfly.app(:steam) }
+
+      describe 'no imagemagick' do
+        before { expect(resizer.plugins).to receive(:[]).with(:imagemagick).and_return(nil) }
+        it { is_expected.to eq 'http://upload.wikimedia.org/wikipedia/en/thumb/b/b5/Metropolitan_railway_steam_locomotive_2781022036.png/240px-Metropolitan_railway_steam_locomotive_2781022036.png' }
+      end
+
+      describe 'no geometry' do
+        let(:geometry) { '' }
+        it { is_expected.to eq 'http://upload.wikimedia.org/wikipedia/en/thumb/b/b5/Metropolitan_railway_steam_locomotive_2781022036.png/240px-Metropolitan_railway_steam_locomotive_2781022036.png' }
+      end
+
+      it { is_expected.to match /\/steam\/dynamic\/.*\/240px-Metropolitan_railway_steam_locomotive_2781022036.png/ }
+
+      describe 'a local asset' do
+
+        let(:input)  { '/sites/42/theme/images/banner.png' }
+        it { is_expected.to match /\/steam\/dynamic\/.*\/banner.png/ }
+
+      end
+
+      describe 'a hash' do
+
+        let(:input) { { 'url' => '/sites/42/theme/images/banner.png' } }
+        it { is_expected.to match /\/steam\/dynamic\/.*\/banner.png/ }
+
+      end
+
+      describe 'an object responding to the url method (Carrierwave uploaded file)' do
+
+        let(:input)  { instance_double('UploadedFile', url: '/sites/42/theme/acme.png') }
+        it { is_expected.to match /\/steam\/dynamic\/.*\/acme.png/ }
+
+      end
+
+      describe 'an url with a timestamp' do
+
+        let(:input)  { '/sites/42/theme/images/banner.png?24e29997bcb00e97d8252cdd29d14e2d' }
+        it { is_expected.to match /\/steam\/dynamic\/.*\/[a-z0-9]+\/banner.png/ }
+
+      end
+
+      describe 'unable to fetch a file' do
+
+        before { allow(service).to receive(:fetch_file).and_return(nil) }
+        it { is_expected.to eq nil }
+
+      end
+
+      describe 'nil file' do
+        let(:geometry) { '' }
+        let(:input)  { nil }
+
+        it { is_expected.to eq nil }
+      end
+
+      describe 'nil hash file' do
+        let(:input) { { 'url' => nil } }
+
+        it { is_expected.to eq nil }
+      end
+
+      describe 'nil object file' do
+        let(:input)  { instance_double('UploadedFile', url: nil) }
+
+        it { is_expected.to eq nil }
+      end
+
+      describe 'additional filters' do
+        let(:input)  { '/sites/42/theme/images/banner.png' }
+        let (:filters) { [{"quality" => 70, "auto_orient" => true, "filters" => "-swirl 180"}] }
+
+        subject { service.resize(input, geometry, filters) }
+
+        it { is_expected.to match /\/steam\/dynamic\/.*\/banner.png/ }
+      end
+
+    end
+
+  end
+
+end

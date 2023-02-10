@@ -1,0 +1,217 @@
+require File.dirname(__FILE__) + '/../integration_helper'
+
+describe 'ContactForm' do
+
+  include Rack::Test::Methods
+
+  def app
+    run_server
+  end
+
+  it 'renders the form' do
+    get '/contact'
+    expect(last_response.body).to include '/entry_submissions/messages.json'
+  end
+
+  describe 'submit a new entry (old version)' do
+
+    let(:url) { '/entry_submissions/messages' }
+    let(:params) { {
+      'entry' => { 'name' => 'John', 'email' => 'j@doe.net', 'message' => 'Bla bla' },
+      'success_callback' => '/events',
+      'error_callback' => '/contact' } }
+    let(:response) { post_contact_form(url, params, false) }
+    let(:status) { response.status }
+
+    describe 'with json request' do
+
+      let(:response) { post_contact_form(url, params, true) }
+      let(:entry) { JSON.parse(response.body) }
+
+      context 'unknown content type' do
+
+        let(:url) { '/entry_submissions/foo' }
+
+        it { expect { response }.to raise_error('Unknown content type "foo" or public_submission_enabled property not true') }
+
+      end
+
+      context 'when not valid' do
+
+        let(:params) { {} }
+
+        it 'returns an error status' do
+          expect(response.status).to eq 422
+        end
+
+        describe 'errors' do
+
+          subject { entry['errors'] }
+
+          it 'lists all the errors' do
+            expect(subject['name']).to eq ["can't be blank"]
+            expect(subject['email']).to eq ["can't be blank"]
+            expect(subject['email']).to eq ["can't be blank"]
+          end
+
+        end
+
+      end
+
+      context 'when valid' do
+
+        it 'returns a success status' do
+          expect(response.status).to eq 200
+        end
+
+      end
+
+    end
+
+    describe 'with html request' do
+
+      context 'when not valid' do
+
+        let(:params) { { 'error_callback' => '/contact' } }
+
+        it 'returns a success status' do
+          expect(response.status).to eq 200
+        end
+
+        it 'displays a global error message' do
+          expect(response.body.to_s).to include "Form with errors"
+        end
+
+        it 'displays errors' do
+          expect(response.body.to_s).to include "can't be blank"
+        end
+
+        context 'redirects outside the site' do
+
+          let(:params) { { 'error_callback' => 'http://www.locomotivecms.com' } }
+
+          it 'returns a success status' do
+            expect(response.status).to eq 301
+          end
+
+        end
+
+      end
+
+      context 'when valid' do
+
+        let(:env)             { {} }
+        let(:follow_redirect) { true }
+        let(:response)        { post_contact_form(url, params, false, follow_redirect, env) }
+
+        it 'returns a success status' do
+          expect(response.status).to eq 200
+        end
+
+        it "doesn't display a global error message" do
+          expect(response.body.to_s).not_to include "Form with errors"
+        end
+
+        it 'displays a success message' do
+          expect(response.body.to_s).to include 'Thank you John'
+        end
+
+        context 'mounted on a different path than /' do
+
+          let(:env)             { { 'steam.mounted_on' => '/foo/bar/' } }
+          let(:follow_redirect) { false }
+
+          it 'redirects to the location prefixed by the mounted_on path' do
+            expect(response.location).to match(/\A\/foo\/bar\/\/events\?submitted_type_slug=messages\&submitted_entry_slug=john/)
+          end
+
+        end
+
+      end
+
+    end
+
+  end
+
+  describe 'submit a new entry (new version)' do
+
+    let(:url)     { '/events' }
+    let(:params)  { {
+      'content_type_slug' => 'messages',
+      'some_variable'     => '42',
+      'entry' => { 'name' => 'John', 'email' => 'j@doe.net', 'message' => 'Bla bla' } } }
+    let(:response) { post_contact_form(url, params) }
+    let(:status) { response.status }
+
+    context 'when not valid' do
+
+      let(:params) { { 'content_type_slug' => 'messages' } }
+
+      it 'returns a success status' do
+        expect(response.status).to eq 200
+      end
+
+      it 'displays errors' do
+        expect(response.body.to_s).to include "can't be blank"
+      end
+
+      describe 'XSS attack' do
+
+        let(:params) { {
+          'content_type_slug' => 'messages',
+          'entry' => { 'name' => '<script>alert(document.cookie)</script>' }
+        } }
+
+        it "doesn't let people to insert malicious JS code" do
+          expect(response.body.to_s).not_to include "<script>alert(document.cookie)</script>"
+        end
+
+      end
+
+    end
+
+    context 'when valid' do
+
+      let(:response) { post_contact_form(url, params, false, true) }
+
+      it 'returns a success status' do
+        expect(response.status).to eq 200
+      end
+
+      it 'displays a success message' do
+        expect(response.body.to_s).to include 'Thank you John'
+      end
+
+      it 'stores hidden fields from the form' do
+        expect(response.body.to_s).to include 'Some variable: 42'
+      end
+
+    end
+
+    context 'in a different locale' do
+
+      let(:url)       { '/fr/evenements' }
+      let(:response)  { post_contact_form(url, params, false, true) }
+
+      it 'returns a success status' do
+        expect(response.status).to eq 200
+      end
+
+    end
+
+  end
+
+  def post_contact_form(url, params, json = false, follow_redirect = false, env = {})
+    if json
+      url += '.json'
+      params = params.symbolize_keys
+    end
+
+    post url, params, env
+
+    follow_redirect! if follow_redirect
+
+    last_response
+  end
+
+end

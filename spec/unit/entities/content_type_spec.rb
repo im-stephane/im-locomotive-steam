@@ -1,0 +1,120 @@
+require 'spec_helper'
+
+describe Locomotive::Steam::ContentType do
+
+  let(:fields) { [instance_double('Field1', label: 'Title', name: :title, localized: false), instance_double('Field2', label: 'Author', name: :author, localized: true)] }
+  let(:repository) { instance_double('FieldRepository', all: fields, first: fields.first, find: nil) }
+  let(:content_type) { described_class.new(name: 'Articles') }
+
+  before { allow(content_type).to receive(:fields).and_return(repository) }
+
+  describe '#label_field_name' do
+
+    subject { content_type.label_field_name }
+    it { is_expected.to eq :title }
+
+    context 'defined within the content type itself' do
+
+      before { allow(content_type.attributes).to receive(:[]).with(:label_field_name).and_return('author') }
+      it { is_expected.to eq :author }
+
+    end
+
+  end
+
+  describe '#fields_by_name' do
+
+    subject { content_type.fields_by_name }
+    it { expect(subject.keys).to eq ['title', 'author'] }
+    it { expect(subject[:title]).to eq(subject['title']) }
+
+  end
+
+  describe '#field_label_of' do
+
+    subject { content_type.field_label_of(:title) }
+    it { is_expected.to eq 'title' }
+
+  end
+
+  describe '#localized_names' do
+
+    subject { content_type.localized_names }
+
+    before {
+      expect(repository).to receive(:localized_names).and_return([])
+      expect(repository).to receive(:selects).and_return([instance_double('CategoryField', name: 'category')])
+    }
+
+    it { expect(subject).to eq ['category'] }
+
+  end
+
+
+  describe '#localized?' do
+
+    let(:names) { [] }
+
+    before { expect(repository).to receive(:localized_names).and_return(names) }
+
+    subject { content_type.localized? }
+
+    it { is_expected.to eq false }
+
+    context 'with one localized field' do
+
+      let(:names) { ['title'] }
+
+      it { is_expected.to eq true }
+
+    end
+
+  end
+
+  describe '#default' do
+
+    subject { content_type.fields_with_default }
+
+    before { expect(repository).to receive(:default).and_return([true]) }
+
+    it { expect(subject).to eq([true])  }
+
+  end
+
+  describe '#order_by' do
+
+    subject { content_type.order_by }
+    it { is_expected.to eq(_position: 'asc') }
+
+    context 'specifying manually' do
+
+      before do
+        content_type.attributes[:order_by] = 'manually'
+        content_type.attributes[:order_direction] = 'desc'
+      end
+      it { is_expected.to eq(_position: 'desc') }
+
+    end
+
+    context 'order_by references an id of a field' do
+
+      let(:field) { instance_double('Field', name: 'title') }
+      let(:repository) { instance_double('FieldRepository', all: fields, first: fields.first, find: field) }
+
+      it { is_expected.to eq(title: 'asc') }
+
+    end
+
+  end
+
+  describe '#persisted_field_names' do
+
+    let(:fields) { [instance_double('Field1', name: :title, persisted_name: 'title'), instance_double('Field2', name: :author, persisted_name: nil)] }
+
+    subject { content_type.persisted_field_names }
+
+    it { is_expected.to eq(['title']) }
+
+  end
+
+end

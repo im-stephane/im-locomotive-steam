@@ -1,0 +1,46 @@
+theme:
+  fields:
+    font:
+      type: string
+      sample: 'OpenSans'
+    color_scheme:
+      localized: true
+
+social:
+  label:
+    fr: Social (FR)
+  position: 1
+  fields:
+    - facebook_id
+    - google_id
+
+github:
+  position: 0
+  fields:
+    api_url:
+      label:
+        en: 'API Url'
+        fr: "Url de l'API"
+      type: string
+      hint: 'API endpoint'
+    expires_in:
+      label:
+        en: 'Expires in'
+        fr: 'Expire dans'
+      hint:
+        en: 'Cache - In milliseconds'
+        fr: 'Cache - En millisecondes'
+      type: integer
+      min: 0
+      max: 3600
+
+smtp:
+  fields:
+    address:
+      type: string
+    localhost:
+      type: string
+    user_name:
+      type: string
+    password:
+      type: string

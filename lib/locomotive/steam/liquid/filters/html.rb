@@ -1,0 +1,108 @@
+module Locomotive
+  module Steam
+    module Liquid
+      module Filters
+        module Html
+
+          # Return a link tag that browsers and news readers can use to auto-detect an RSS or ATOM feed.
+          # input: url of the feed
+          # example:
+          #   {{ '/foo/bar' | auto_discovery_link_tag: 'rel:alternate', 'type:application/atom+xml', 'title:A title' }}
+          def auto_discovery_link_tag(input, *args)
+            options = args_to_options(args)
+
+            rel   = options[:rel] || 'alternate'
+            type  = options[:type] || 'application/rss+xml'
+            title = options[:title] || 'RSS'
+
+            %{<link rel="#{rel}" type="#{type}" title="#{title}" href="#{input}" />}
+          end
+
+          # Write the url of any theme file
+          def theme_asset_url(input)
+            any_asset_url(input)
+          end
+
+          # Write the url of a theme stylesheet
+          # input: name of the css file
+          def stylesheet_url(input)
+            any_asset_url(input, '.css', 'stylesheets')
+          end
+
+          # Write the link tag of a theme stylesheet
+          # input: url of the css file
+          def stylesheet_tag(input, media = 'screen')
+            return '' if input.nil?
+
+            input = stylesheet_url(input)
+
+            %{<link href="#{input}" media="#{media}" rel="stylesheet" type="text/css" />}
+          end
+
+          # Write the url to javascript resource
+          # input: name of the javascript file
+          def javascript_url(input)
+            any_asset_url(input, '.js', 'javascripts')
+          end
+
+          # Write the link to javascript resource
+          # input: url of the javascript file
+          def javascript_tag(input, *args)
+            return '' if input.nil?
+
+            javascript_options = inline_options(args_to_options(args))
+            input = javascript_url(input)
+
+            %{<script src="#{input}" type="text/javascript" #{javascript_options}></script>}
+          end
+
+          def theme_image_url(input)
+            return '' if input.nil?
+
+            input = "images/#{input}" unless input.starts_with?('/')
+
+            asset_url(input)
+          end
+
+          # Write a theme image tag
+          # input: name of file including folder
+          # example: 'about/myphoto.jpg' | theme_image # <img src="images/about/myphoto.jpg">
+          def theme_image_tag(input, *args)
+            image_options = inline_options(args_to_options(args))
+
+            %{<img src="#{theme_image_url(input)}" #{image_options}>}
+          end
+
+          # Write an image tag
+          # input: url of the image OR asset drop
+          def image_tag(input, *args)
+            image_options = inline_options(args_to_options(args))
+
+            %{<img src="#{get_url_from_asset(input)}" #{image_options}>}
+          end
+
+          # Embed a flash movie into a page
+          # input: url of the flash movie OR asset drop
+          # width: width (in pixel or in %) of the embedded movie
+          # height: height (in pixel or in %) of the embedded movie
+          def flash_tag(input, *args)
+            path = get_url_from_asset(input)
+            embed_options = inline_options(args_to_options(args))
+            html = <<-EOF
+<object #{embed_options}>
+  <param name="movie" value="#{path}">
+  <embed src="#{path}" #{embed_options}>
+  </embed>
+</object>
+EOF
+            html.gsub(/ >/, '>').strip
+          end
+
+        end
+
+        ::Liquid::Template.register_filter(Html)
+
+      end
+    end
+  end
+end

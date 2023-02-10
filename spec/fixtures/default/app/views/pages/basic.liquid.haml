@@ -1,0 +1,27 @@
+---
+title: Basic page
+position: 6
+---
+!!! XML
+!!!
+%html{ :lang => "en" }
+  %head
+    %meta{ :charset => "utf-8" }
+
+    %title {{ page.title }}
+  %body
+    %p
+      This is a basic page
+
+    %ul
+      %li Font={{ site.metafields.theme.font }}
+      %li Color scheme={{ site.metafields.theme.color_scheme }}
+      %li Facebook ID={{ site.metafields.social.facebook_id }}
+      %li Google ID={{ site.metafields.social.google_id }}
+      %li API URL={{ site.metafields.github.api_url }}
+      %li Expires In={{ site.metafields.github.expires_in }}
+
+    %ul
+      {% for property in site.metafields.social %}
+      %li.property {{ property.label }}({{ property.name }})={{ property.value }}
+      {% endfor %}
